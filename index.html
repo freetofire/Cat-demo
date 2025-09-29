@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatFire App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='//libtl.com/sdk.js' data-zone='9937367' data-sdk='show_9937367'></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        .main-container { max-width: 480px; margin: 0 auto; }
+        .nav-btn { transition: all 0.2s ease-in-out; }
+        .nav-btn.active { color: #3b82f6; transform: scale(1.1); }
+        .page { display: none; }
+        .page.active { display: block; }
+        .task-card { background-color: #1f2937; border: 1px solid #374151; }
+        .btn-primary { background-color: #3b82f6; color: white; }
+        .btn-secondary { background-color: #374151; }
+        #spinner {
+            transition: transform 4s ease-out;
+            transform-origin: center;
+        }
+        #aviator-canvas {
+            background: linear-gradient(to top, #1f2937, #374151);
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="vpn-blocker" class="fixed inset-0 bg-black bg-opacity-80 flex-col items-center justify-center z-50 hidden">
+        <div class="bg-red-800 p-8 rounded-lg text-center shadow-2xl">
+            <i class="fas fa-exclamation-triangle fa-3x text-yellow-300 mb-4"></i>
+            <h2 class="text-2xl font-bold mb-2">VPN Detected!</h2>
+            <p class="text-lg">Please disable your VPN to continue using the app.</p>
+        </div>
+    </div>
+
+    <div class="main-container bg-gray-900 min-h-screen flex flex-col">
+        <main id="app-content" class="flex-grow p-4 pb-24">
+            <!-- Home Page -->
+            <div id="home-page" class="page active">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold">Dashboard</h1>
+                    <div id="profile-icon" class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center font-bold text-xl cursor-pointer">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-4 rounded-lg text-center mb-6">
+                    <p class="text-gray-400 text-sm">Your Balance</p>
+                    <p class="text-3xl font-bold my-2">$<span id="balance-display-home">0.00</span></p>
+                    <button id="home-withdraw-btn" class="btn-primary w-full py-2 rounded-lg font-semibold">Withdraw</button>
+                </div>
+
+                <!-- Games -->
+                <h2 class="font-bold text-xl mb-4">Games</h2>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div id="aviator-game-card" class="task-card p-4 rounded-lg text-center cursor-pointer">
+                        <i class="fas fa-plane-departure fa-2x text-blue-400 mb-2"></i>
+                        <p class="font-semibold">Aviator</p>
+                    </div>
+                    <div id="spin-game-card" class="task-card p-4 rounded-lg text-center cursor-pointer">
+                        <i class="fas fa-compact-disc fa-2x text-purple-400 mb-2"></i>
+                        <p class="font-semibold">Lucky Spin</p>
+                    </div>
+                </div>
+
+                <!-- Tasks -->
+                <h2 class="font-bold text-xl mb-4">Tasks</h2>
+                <div class="space-y-4">
+                    <div id="daily-tasks-card" class="task-card p-4 rounded-lg flex items-center justify-between cursor-pointer">
+                        <div>
+                            <p class="font-semibold text-lg">Daily Tasks</p>
+                            <p class="text-sm text-gray-400">Earn rewards every day!</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </div>
+                    <div id="one-time-tasks-card" class="task-card p-4 rounded-lg flex items-center justify-between cursor-pointer">
+                         <div>
+                            <p class="font-semibold text-lg">One-Time Bonus</p>
+                            <p class="text-sm text-gray-400">Complete once for a big reward!</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Withdraw Page -->
+            <div id="withdraw-page" class="page">
+                <h1 class="text-2xl font-bold mb-4">Withdraw Funds</h1>
+                <div class="bg-blue-900/50 border border-blue-500 text-blue-200 p-3 rounded-lg text-sm mb-6">
+                    <strong>Notice:</strong> Minimum withdrawal is $<span id="min-withdraw-amount-display">150</span>. Withdrawals are processed within 24-48 hours.
+                </div>
+
+                <div class="space-y-4 mb-6">
+                    <input id="withdraw-amount" type="number" placeholder="Enter Amount" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="withdraw-wallet" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="binance">Binance</option>
+                        <option value="tonkeeper">Tonkeeper</option>
+                    </select>
+                    <input id="withdraw-mobile" type="text" placeholder="Mobile Number" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input id="withdraw-wallet-id" type="text" placeholder="Binance/Tonkeeper ID" class="w-full p-3 bg-gray-800 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button id="submit-withdraw-btn" class="btn-primary w-full py-3 rounded-lg font-bold">Submit Request</button>
+                
+                <h2 class="text-xl font-bold mt-8 mb-4">My Withdrawal History</h2>
+                <div id="withdraw-history-container" class="space-y-3">
+                    <!-- History items will be injected here -->
+                    <p class="text-gray-500 text-center">No withdrawal data yet.</p>
+                </div>
+
+                <h2 class="text-xl font-bold mt-8 mb-4">Top Withdrawers</h2>
+                <div id="top-withdrawers-container" class="space-y-2">
+                     <!-- Top withdrawers list will be injected here -->
+                </div>
+            </div>
+
+            <!-- Refer Page -->
+            <div id="refer-page" class="page">
+                <h1 class="text-2xl font-bold mb-4">Refer & Earn</h1>
+                 <div class="bg-gray-800 p-6 rounded-lg text-center">
+                    <i class="fas fa-users fa-3x text-blue-400 mb-4"></i>
+                    <p class="text-lg">Invite friends and you both get a bonus!</p>
+                    <p class="text-3xl font-bold my-3">$2.00 <span class="text-lg font-normal">for you</span>, $2.66 <span class="text-lg font-normal">for them</span></p>
+                    <p class="text-gray-400 text-sm mb-6">Share your referral link. When your friend joins and starts the bot, you both receive your rewards instantly.</p>
+
+                    <div class="bg-gray-900 p-2 rounded-lg flex items-center mb-4">
+                        <input id="referral-link" type="text" readonly class="bg-transparent text-gray-300 text-sm w-full outline-none">
+                        <button id="copy-link-btn" class="bg-blue-600 px-4 py-2 rounded-lg font-semibold whitespace-nowrap">Copy</button>
+                    </div>
+                    <button id="share-link-btn" class="btn-primary w-full py-3 rounded-lg font-bold">
+                        <i class="fab fa-telegram-plane mr-2"></i> Share on Telegram
+                    </button>
+                </div>
+
+                <div class="mt-8">
+                    <h2 class="text-xl font-bold mb-4">Referral Stats</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-800 p-4 rounded-lg">
+                            <p class="text-gray-400">Total Referrals</p>
+                            <p id="total-referrals" class="text-2xl font-bold">0</p>
+                        </div>
+                         <div class="bg-gray-800 p-4 rounded-lg">
+                            <p class="text-gray-400">Referral Earnings</p>
+                            <p id="referral-earnings" class="text-2xl font-bold">$0.00</p>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-bold mt-6 mb-3">Recent Referrals</h3>
+                    <div id="recent-referrals-list" class="space-y-2 text-gray-400">
+                        <p>No recent referrals.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profile-page" class="page">
+                <h1 class="text-2xl font-bold mb-6">My Profile</h1>
+                <div class="bg-gray-800 p-6 rounded-lg flex items-center space-x-4 mb-6">
+                    <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-3xl font-bold">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <p id="profile-name" class="text-xl font-semibold">User Name</p>
+                        <p id="profile-tg-id" class="text-sm text-gray-400">TG ID: N/A</p>
+                    </div>
+                </div>
+                
+                <h2 class="text-xl font-bold mb-4">Income Dashboard</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400">Total Balance</p>
+                        <p id="profile-balance" class="text-2xl font-bold">$0.00</p>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400">Game Earnings</p>
+                        <p id="profile-game-earnings" class="text-2xl font-bold">$0.00</p>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400">Task Earnings</p>
+                        <p id="profile-task-earnings" class="text-2xl font-bold">$0.00</p>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="text-gray-400">Referral Earnings</p>
+                        <p id="profile-referral-earnings" class="text-2xl font-bold">$0.00</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Daily Tasks Page -->
+            <div id="daily-tasks-page" class="page">
+                <button class="back-btn mb-4 font-bold"><i class="fas fa-arrow-left mr-2"></i>Back</button>
+                <h1 class="text-2xl font-bold mb-6">Daily Tasks</h1>
+                <div class="space-y-4">
+                    <div class="task-card p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-lg">Watch Ads</p>
+                                <p class="text-sm text-gray-400">Earn $0.50 per ad</p>
+                            </div>
+                            <button id="watch-ad-btn" class="btn-primary px-4 py-2 rounded-lg font-semibold disabled:bg-gray-500">Watch <span id="ads-left">(10/10)</span></button>
+                        </div>
+                    </div>
+                    <div class="task-card p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-lg">Daily Bonus</p>
+                                <p class="text-sm text-gray-400">Claim $0.30 every 24 hours</p>
+                            </div>
+                            <button id="daily-claim-btn" class="btn-primary px-4 py-2 rounded-lg font-semibold disabled:bg-gray-500">Claim</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- One-Time Tasks Page -->
+            <div id="one-time-tasks-page" class="page">
+                <button class="back-btn mb-4 font-bold"><i class="fas fa-arrow-left mr-2"></i>Back</button>
+                <h1 class="text-2xl font-bold mb-6">One-Time Bonus</h1>
+                <div class="space-y-4">
+                    <div class="task-card p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-lg">Join Telegram</p>
+                                <p class="text-sm text-gray-400">Join our channel for $1.00</p>
+                            </div>
+                            <button id="join-telegram-btn" class="btn-primary px-4 py-2 rounded-lg font-semibold disabled:bg-green-600 disabled:text-white">Join</button>
+                        </div>
+                    </div>
+                    <div class="task-card p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-lg">Subscribe to YouTube</p>
+                                <p class="text-sm text-gray-400">Subscribe for $1.00</p>
+                            </div>
+                            <button id="subscribe-youtube-btn" class="btn-primary px-4 py-2 rounded-lg font-semibold disabled:bg-green-600 disabled:text-white">Subscribe</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aviator Game Page -->
+            <div id="aviator-page" class="page">
+                <button class="back-btn mb-4 font-bold"><i class="fas fa-arrow-left mr-2"></i>Back</button>
+                <h1 class="text-2xl font-bold text-center mb-2">Aviator</h1>
+                <div class="relative mb-4">
+                    <canvas id="aviator-canvas" width="400" height="300"></canvas>
+                    <div id="aviator-multiplier" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl font-bold text-white" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">1.00x</div>
+                    <div id="aviator-status" class="absolute top-8 left-1/2 -translate-x-1/2 text-2xl font-bold text-red-500 hidden">CRASHED!</div>
+                </div>
+                <div class="bg-gray-800 p-4 rounded-lg">
+                    <div class="flex gap-4 mb-4">
+                        <input id="aviator-bet-amount" type="number" value="1" min="1" class="w-full p-2 bg-gray-700 rounded-lg border border-gray-600">
+                        <button id="aviator-bet-btn" class="btn-primary w-full py-2 rounded-lg font-bold">Place Bet</button>
+                    </div>
+                    <button id="aviator-cashout-btn" class="bg-green-600 w-full py-3 rounded-lg font-bold disabled:bg-gray-500" disabled>Cash Out</button>
+                </div>
+            </div>
+
+            <!-- Spin Game Page -->
+            <div id="spin-page" class="page">
+                 <button class="back-btn mb-4 font-bold"><i class="fas fa-arrow-left mr-2"></i>Back</button>
+                <h1 class="text-2xl font-bold text-center mb-4">Lucky Spin</h1>
+                <p class="text-center text-gray-400 mb-6">Costs $1.00 per spin</p>
+                <div class="relative w-80 h-80 mx-auto mb-6">
+                    <div id="spinner" class="w-full h-full rounded-full border-4 border-blue-500 relative">
+                        <!-- Segments will be generated by JS -->
+                    </div>
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-0 h-0 border-x-8 border-x-transparent border-b-[16px] border-b-red-500"></div>
+                </div>
+                <button id="spin-btn" class="btn-primary w-full max-w-xs mx-auto py-3 rounded-lg font-bold flex items-center justify-center disabled:bg-gray-500">Spin the Wheel</button>
+            </div>
+
+        </main>
+
+        <!-- Navigation Bar -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 flex justify-around max-w-480px mx-auto">
+            <button data-page="home-page" class="nav-btn active flex-1 py-3 text-center text-gray-400">
+                <i class="fas fa-home text-2xl"></i>
+                <span class="text-xs block">Home</span>
+            </button>
+            <button data-page="withdraw-page" class="nav-btn flex-1 py-3 text-center text-gray-400">
+                <i class="fas fa-wallet text-2xl"></i>
+                <span class="text-xs block">Withdraw</span>
+            </button>
+            <button data-page="refer-page" class="nav-btn flex-1 py-3 text-center text-gray-400">
+                <i class="fas fa-user-plus text-2xl"></i>
+                 <span class="text-xs block">Refer</span>
+            </button>
+            <button data-page="profile-page" class="nav-btn flex-1 py-3 text-center text-gray-400">
+                <i class="fas fa-user-circle text-2xl"></i>
+                <span class="text-xs block">Profile</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Generic Modal/Popup -->
+    <div id="popup" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg text-center shadow-2xl max-w-sm mx-4">
+            <h3 id="popup-title" class="text-xl font-bold mb-2"></h3>
+            <p id="popup-message" class="text-gray-300 mb-6"></p>
+            <button id="popup-close-btn" class="btn-secondary px-6 py-2 rounded-lg">Close</button>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7vbuDVd49qNePXsNCJrsMVmj-LCSH3R8",
+            authDomain: "cat-fire-bot.firebaseapp.com",
+            databaseURL: "https://cat-fire-bot-default-rtdb.firebaseio.com",
+            projectId: "cat-fire-bot",
+            storageBucket: "cat-fire-bot.firebasestorage.app",
+            messagingSenderId: "320717959791",
+            appId: "1:320717959791:web:8a6d191972cf263a7d939a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const tg = window.Telegram.WebApp;
+
+        let telegramId;
+        let userData = {};
+        let adminConfig = { minWithdrawAmount: 150 };
+
+        // --- POPUP/MODAL ---
+        const popup = document.getElementById('popup');
+        const popupTitle = document.getElementById('popup-title');
+        const popupMessage = document.getElementById('popup-message');
+        
+        function showPopup(title, message) {
+            popupTitle.textContent = title;
+            popupMessage.innerHTML = message; // Use innerHTML for potential formatting
+            popup.classList.remove('hidden');
+            popup.classList.add('flex');
+        }
+
+        document.getElementById('popup-close-btn').addEventListener('click', () => {
+            popup.classList.add('hidden');
+            popup.classList.remove('flex');
+        });
+
+        // --- INITIALIZATION ---
+        async function initApp() {
+            tg.ready();
+            tg.expand();
+            
+            checkVPN();
+
+            if (!tg.initDataUnsafe?.user?.id) {
+                showPopup("Authentication Error", "Could not identify your Telegram account. Please run this app inside Telegram.");
+                document.getElementById('app-content').classList.add('hidden');
+                document.querySelector('nav').classList.add('hidden');
+                return;
+            }
+            telegramId = tg.initDataUnsafe.user.id.toString();
+
+            await loadOrCreateUser();
+            listenToUserData();
+            listenToAdminConfig();
+            listenToWithdrawals();
+            listenToTopWithdrawers();
+            await handleReferral();
+            
+            setupEventListeners();
+            navigateTo('home-page');
+            const username = tg.initDataUnsafe?.user?.username || 'user';
+            showPopup('Welcome!', `Welcome back, @${username}!`);
+        }
+
+        async function loadOrCreateUser() {
+            const userRef = doc(db, "users", telegramId);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                const newUser = {
+                    telegram: {
+                        id: tg.initDataUnsafe.user.id,
+                        username: tg.initDataUnsafe.user.username || 'Guest',
+                        firstName: tg.initDataUnsafe.user.first_name || 'New',
+                        lastName: tg.initDataUnsafe.user.last_name || 'User',
+                    },
+                    balance: 0.00,
+                    earnings: {
+                        games: 0,
+                        tasks: 0,
+                        referrals: 0,
+                    },
+                    tasks: {
+                        dailyClaimedAt: null,
+                        adsWatchedToday: 0,
+                        lastAdWatchedAt: null,
+                        joinedTelegram: false,
+                        subscribedYouTube: false,
+                    },
+                    referrals: {
+                        referrer: null,
+                        referredCount: 0,
+                        list: []
+                    },
+                    createdAt: serverTimestamp()
+                };
+                await setDoc(userRef, newUser);
+                userData = newUser;
+            } else {
+                userData = userSnap.data();
+            }
+        }
+        
+        async function handleReferral() {
+            const startParam = tg.initDataUnsafe?.start_param;
+            if (startParam && !userData.referrals.referrer) {
+                const referrerId = startParam;
+                
+                const currentUserTgId = tg.initDataUnsafe?.user?.id?.toString();
+                if (referrerId === currentUserTgId) {
+                    console.log("User tried to refer themselves.");
+                    return;
+                }
+
+                const userRef = doc(db, "users", telegramId);
+                const referrerQuery = query(collection(db, "users"), where("telegram.id", "==", parseInt(referrerId)));
+                const referrerSnap = await getDocs(referrerQuery);
+
+                if (!referrerSnap.empty) {
+                    const referrerDoc = referrerSnap.docs[0];
+                    const referrerRef = referrerDoc.ref;
+                    
+                    const batch = writeBatch(db);
+
+                    // Credit new user
+                    const newUserBonus = 2.66;
+                    batch.update(userRef, {
+                        'referrals.referrer': referrerId,
+                        'balance': (userData.balance || 0) + newUserBonus,
+                        'earnings.referrals': (userData.earnings?.referrals || 0) + newUserBonus
+                    });
+
+                    // Credit referrer
+                    const referrerBonus = 2.00;
+                    const referrerData = referrerDoc.data();
+                    batch.update(referrerRef, {
+                        'balance': (referrerData.balance || 0) + referrerBonus,
+                        'earnings.referrals': (referrerData.earnings?.referrals || 0) + referrerBonus,
+                        'referrals.referredCount': (referrerData.referrals?.referredCount || 0) + 1,
+                        'referrals.list': [...(referrerData.referrals?.list || []), {
+                            id: currentUserTgId, 
+                            username: tg.initDataUnsafe?.user?.username || 'Unknown',
+                            timestamp: new Date()
+                        }]
+                    });
+
+                    await batch.commit();
+                    showPopup("Referral Success!", `You've received $${newUserBonus} and your friend received $${referrerBonus}!`);
+                }
+            }
+        }
+
+        function listenToUserData() {
+            onSnapshot(doc(db, "users", telegramId), (doc) => {
+                if (doc.exists()) {
+                    userData = doc.data();
+                    updateUI();
+                }
+            });
+        }
+        
+        function listenToAdminConfig() {
+             onSnapshot(doc(db, "admin", "config"), (doc) => {
+                if (doc.exists()) {
+                    adminConfig = doc.data();
+                    updateUI();
+                }
+            });
+        }
+
+        function listenToWithdrawals() {
+            const q = query(collection(db, "withdrawals"), where("telegramId", "==", userData.telegram.id));
+            onSnapshot(q, (snapshot) => {
+                const historyContainer = document.getElementById('withdraw-history-container');
+                if (snapshot.empty) {
+                    historyContainer.innerHTML = `<p class="text-gray-500 text-center">No withdrawal data yet.</p>`;
+                    return;
+                }
+                let html = '';
+                snapshot.docs.sort((a,b) => b.data().timestamp - a.data().timestamp).forEach(doc => {
+                    const data = doc.data();
+                    const date = data.timestamp.toDate().toLocaleString();
+                    let statusClass = '';
+                    if (data.status === 'pending') statusClass = 'text-yellow-400';
+                    else if (data.status === 'approved') statusClass = 'text-green-400';
+                    else if (data.status === 'rejected') statusClass = 'text-red-400';
+
+                    html += `
+                        <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-lg">$${data.amount.toFixed(2)}</p>
+                                <p class="text-xs text-gray-400">${date}</p>
+                            </div>
+                            <span class="font-semibold capitalize ${statusClass}">${data.status}</span>
+                        </div>
+                    `;
+                });
+                historyContainer.innerHTML = html;
+            });
+        }
+        
+        function listenToTopWithdrawers() {
+            onSnapshot(doc(db, "admin", "topWithdrawers"), (doc) => {
+                const container = document.getElementById('top-withdrawers-container');
+                if (doc.exists()) {
+                    const data = doc.data().list || [];
+                    if(data.length === 0){
+                         container.innerHTML = `<p class="text-gray-500 text-center">No data available.</p>`;
+                         return;
+                    }
+                    let html = data.map((item, index) => `
+                        <div class="bg-gray-800 p-3 rounded-lg flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                               <span class="font-bold text-lg">${index + 1}.</span>
+                               <span>${item.name}</span>
+                            </div>
+                           <span class="font-semibold text-green-400">$${item.amount}</span>
+                        </div>
+                    `).join('');
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `<p class="text-gray-500 text-center">No data available.</p>`;
+                }
+            });
+        }
+
+        async function checkVPN() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                 const vpnResponse = await fetch(`https://json.is-a-good-boy.com/api/v2/proxy-check?ip=${data.ip}`);
+                 const vpnData = await vpnResponse.json();
+                 if(vpnData.isProxy) {
+                    document.getElementById('vpn-blocker').classList.remove('hidden');
+                    document.getElementById('vpn-blocker').classList.add('flex');
+                 }
+
+            } catch (error) {
+                console.warn("Could not check VPN status:", error);
+            }
+        }
+
+        // --- UI UPDATES ---
+        function updateUI() {
+            if (!userData) return;
+            
+            // Balance
+            const balance = userData.balance || 0;
+            document.getElementById('balance-display-home').textContent = balance.toFixed(2);
+            document.getElementById('profile-balance').textContent = `$${balance.toFixed(2)}`;
+            
+            // Profile
+            document.getElementById('profile-name').textContent = `${userData.telegram?.firstName || 'User'} ${userData.telegram?.lastName || ''}`;
+            document.getElementById('profile-tg-id').textContent = `TG ID: ${userData.telegram?.id || 'N/A'}`;
+            document.getElementById('profile-game-earnings').textContent = `$${(userData.earnings?.games || 0).toFixed(2)}`;
+            document.getElementById('profile-task-earnings').textContent = `$${(userData.earnings?.tasks || 0).toFixed(2)}`;
+            document.getElementById('profile-referral-earnings').textContent = `$${(userData.earnings?.referrals || 0).toFixed(2)}`;
+
+            // Referral Page
+            if (userData.telegram?.id) {
+                document.getElementById('referral-link').value = `https://t.me/CatFire_Bot/app?startapp=${userData.telegram.id}`;
+            } else {
+                 document.getElementById('referral-link').value = `Please connect your Telegram`;
+            }
+            document.getElementById('total-referrals').textContent = userData.referrals?.referredCount || 0;
+            document.getElementById('referral-earnings').textContent = `$${(userData.earnings?.referrals || 0).toFixed(2)}`;
+            const recentReferralsList = document.getElementById('recent-referrals-list');
+            const referrals = userData.referrals?.list || [];
+            if(referrals.length > 0) {
+                recentReferralsList.innerHTML = referrals.slice(-5).reverse().map(r => `<div class="bg-gray-800 p-2 rounded">@${r.username || 'user'} joined</div>`).join('');
+            } else {
+                recentReferralsList.innerHTML = `<p>No recent referrals.</p>`
+            }
+
+
+            // Daily Tasks
+            const adsWatched = getAdsWatchedToday();
+            document.getElementById('ads-left').textContent = `(${10 - adsWatched}/10)`;
+            document.getElementById('watch-ad-btn').disabled = adsWatched >= 10;
+            
+            const claimedToday = hasClaimedDailyBonus();
+            const dailyClaimBtn = document.getElementById('daily-claim-btn');
+            dailyClaimBtn.disabled = claimedToday;
+            dailyClaimBtn.textContent = claimedToday ? "Claimed" : "Claim";
+            
+            // One-Time Tasks
+            const joinTgBtn = document.getElementById('join-telegram-btn');
+            if(userData.tasks?.joinedTelegram) {
+                joinTgBtn.disabled = true;
+                joinTgBtn.textContent = "Claimed";
+            } else {
+                joinTgBtn.disabled = false;
+                joinTgBtn.textContent = "Join";
+            }
+
+            const subYtBtn = document.getElementById('subscribe-youtube-btn');
+             if(userData.tasks?.subscribedYouTube) {
+                subYtBtn.disabled = true;
+                subYtBtn.textContent = "Claimed";
+            } else {
+                subYtBtn.disabled = false;
+                subYtBtn.textContent = "Subscribe";
+            }
+            
+            // Withdraw Page
+            document.getElementById('min-withdraw-amount-display').textContent = adminConfig.minWithdrawAmount;
+        }
+
+        // --- NAVIGATION ---
+        function navigateTo(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('active');
+                if (b.dataset.page === pageId) {
+                    b.classList.add('active');
+                }
+            });
+            window.scrollTo(0, 0);
+        }
+
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+            });
+            
+            document.querySelectorAll('.back-btn').forEach(btn => {
+                btn.addEventListener('click', () => navigateTo('home-page'));
+            });
+
+            document.getElementById('profile-icon').addEventListener('click', () => navigateTo('profile-page'));
+            document.getElementById('home-withdraw-btn').addEventListener('click', () => navigateTo('withdraw-page'));
+            document.getElementById('aviator-game-card').addEventListener('click', () => navigateTo('aviator-page'));
+            document.getElementById('spin-game-card').addEventListener('click', () => navigateTo('spin-page'));
+            document.getElementById('daily-tasks-card').addEventListener('click', () => navigateTo('daily-tasks-page'));
+            document.getElementById('one-time-tasks-card').addEventListener('click', () => navigateTo('one-time-tasks-page'));
+
+            // Withdraw
+            document.getElementById('submit-withdraw-btn').addEventListener('click', submitWithdrawal);
+
+            // Refer
+            document.getElementById('copy-link-btn').addEventListener('click', copyReferralLink);
+            document.getElementById('share-link-btn').addEventListener('click', shareReferralLink);
+
+            // Tasks
+            document.getElementById('watch-ad-btn').addEventListener('click', watchAd);
+            document.getElementById('daily-claim-btn').addEventListener('click', claimDailyBonus);
+            setupOneTimeTaskButtons();
+
+            // Games
+            document.getElementById('spin-btn').addEventListener('click', startSpin);
+            document.getElementById('aviator-bet-btn').addEventListener('click', placeAviatorBet);
+            document.getElementById('aviator-cashout-btn').addEventListener('click', cashoutAviator);
+        }
+
+        // --- HELPER FUNCTIONS ---
+        async function updateUserBalance(amount, type, description) {
+            const userRef = doc(db, "users", telegramId);
+            const newBalance = (userData.balance || 0) + amount;
+            const updateData = {
+                balance: newBalance
+            };
+            if (type) {
+                updateData[`earnings.${type}`] = (userData.earnings?.[type] || 0) + amount;
+            }
+            await updateDoc(userRef, updateData);
+            console.log(description, `Amount: ${amount}`);
+        }
+        
+        function getAdsWatchedToday() {
+            if (!userData.tasks?.lastAdWatchedAt) return 0;
+            const lastAdDate = userData.tasks.lastAdWatchedAt.toDate();
+            const today = new Date();
+            if (lastAdDate.getFullYear() === today.getFullYear() &&
+                lastAdDate.getMonth() === today.getMonth() &&
+                lastAdDate.getDate() === today.getDate()) {
+                return userData.tasks.adsWatchedToday || 0;
+            }
+            return 0;
+        }
+
+        function hasClaimedDailyBonus() {
+             if (!userData.tasks?.dailyClaimedAt) return false;
+            const lastClaimDate = userData.tasks.dailyClaimedAt.toDate();
+            const today = new Date();
+            return lastClaimDate.getFullYear() === today.getFullYear() &&
+                   lastClaimDate.getMonth() === today.getMonth() &&
+                   lastClaimDate.getDate() === today.getDate();
+        }
+
+        // --- CORE LOGIC ---
+        // Withdraw
+        async function submitWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            const wallet = document.getElementById('withdraw-wallet').value;
+            const mobile = document.getElementById('withdraw-mobile').value;
+            const walletId = document.getElementById('withdraw-wallet-id').value;
+            
+            if (isNaN(amount) || amount <= 0) {
+                showPopup("Error", "Please enter a valid amount.");
+                return;
+            }
+            if (amount < adminConfig.minWithdrawAmount) {
+                showPopup("Error", `Minimum withdrawal amount is $${adminConfig.minWithdrawAmount}.`);
+                return;
+            }
+            if (amount > userData.balance) {
+                showPopup("Error", "Insufficient balance.");
+                return;
+            }
+            if (!mobile || !walletId) {
+                showPopup("Error", "Please fill in all fields.");
+                return;
+            }
+
+            try {
+                // Deduct balance first
+                await updateUserBalance(-amount, null, "Withdrawal request");
+                
+                // Add to withdrawals collection
+                await addDoc(collection(db, "withdrawals"), {
+                    telegramId: userData.telegram.id,
+                    telegramUsername: userData.telegram?.username || 'N/A',
+                    amount: amount,
+                    wallet: wallet,
+                    mobile: mobile,
+                    walletId: walletId,
+                    status: 'pending',
+                    timestamp: serverTimestamp()
+                });
+
+                showPopup("Success", "Your withdrawal request has been submitted and is pending review.");
+                document.getElementById('withdraw-amount').value = '';
+                document.getElementById('withdraw-mobile').value = '';
+                document.getElementById('withdraw-wallet-id').value = '';
+                navigateTo('home-page');
+            } catch (error) {
+                showPopup("Error", "Could not process your request. Please try again.");
+                // Rollback balance if Firestore fails
+                await updateUserBalance(amount, null, "Withdrawal failed rollback");
+                console.error("Withdrawal error:", error);
+            }
+        }
+
+        // Refer
+        function copyReferralLink() {
+            const linkInput = document.getElementById('referral-link');
+            linkInput.select();
+            document.execCommand('copy');
+            showPopup("Copied!", "Referral link copied to clipboard.");
+        }
+        
+        function shareReferralLink() {
+            const link = document.getElementById('referral-link').value;
+            if (link) {
+                tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Join CatFire and we both get a bonus!")}`);
+            }
+        }
+        
+        // Tasks
+        function watchAd() {
+            show_9937367().then(async () => {
+                showPopup("Success!", "You've earned $0.50 for watching the ad.");
+                await updateUserBalance(0.50, 'tasks', 'Ad watch reward');
+                
+                const userRef = doc(db, "users", telegramId);
+                const adsWatched = getAdsWatchedToday();
+                
+                if (adsWatched === 0) { // First ad of the day
+                     await updateDoc(userRef, {
+                        'tasks.adsWatchedToday': 1,
+                        'tasks.lastAdWatchedAt': serverTimestamp()
+                    });
+                } else {
+                     await updateDoc(userRef, {
+                        'tasks.adsWatchedToday': adsWatched + 1
+                    });
+                }
+            }).catch(e => {
+                showPopup("Ad Error", "The ad could not be shown. Please try again later.");
+                console.error("Monetag ad error:", e);
+            });
+        }
+        
+        async function claimDailyBonus() {
+            if(hasClaimedDailyBonus()) {
+                showPopup("Already Claimed", "You can claim your daily bonus again in 24 hours.");
+                return;
+            }
+            await updateUserBalance(0.30, 'tasks', 'Daily bonus claim');
+            await updateDoc(doc(db, "users", telegramId), {
+                'tasks.dailyClaimedAt': serverTimestamp()
+            });
+            showPopup("Success!", "You've claimed your daily bonus of $0.30!");
+        }
+
+        function setupOneTimeTaskButtons() {
+            const joinTgBtn = document.getElementById('join-telegram-btn');
+            const subYtBtn = document.getElementById('subscribe-youtube-btn');
+            const tgChannelUrl = "https://t.me/catfire_channel";
+            const ytChannelUrl = "https://www.youtube.com"; // Replace with actual URL
+
+            joinTgBtn.addEventListener('click', async () => {
+                if (joinTgBtn.textContent === "Join") {
+                    tg.openTelegramLink(tgChannelUrl);
+                    joinTgBtn.textContent = "Claim";
+                    joinTgBtn.classList.remove('btn-primary');
+                    joinTgBtn.classList.add('bg-green-600');
+                } else if(joinTgBtn.textContent === "Claim") {
+                     if(userData.tasks?.joinedTelegram) return;
+                     await updateUserBalance(1.00, 'tasks', 'Joined Telegram');
+                     await updateDoc(doc(db, "users", telegramId), {'tasks.joinedTelegram': true});
+                     showPopup("Success!", "You've earned $1.00 for joining our channel.");
+                }
+            });
+
+            subYtBtn.addEventListener('click', async () => {
+                if (subYtBtn.textContent === "Subscribe") {
+                    window.open(ytChannelUrl, '_blank');
+                    subYtBtn.textContent = "Claim";
+                    subYtBtn.classList.remove('btn-primary');
+                    subYtBtn.classList.add('bg-green-600');
+                } else if(subYtBtn.textContent === "Claim") {
+                    if(userData.tasks?.subscribedYouTube) return;
+                    await updateUserBalance(1.00, 'tasks', 'Subscribed to YouTube');
+                    await updateDoc(doc(db, "users", telegramId), {'tasks.subscribedYouTube': true});
+                    showPopup("Success!", "You've earned $1.00 for subscribing.");
+                }
+            });
+        }
+        
+        // --- Lucky Spin Game ---
+        const spinOutcomes = [-2, 0, 2, 5, 100]; // Values on the wheel
+        const spinner = document.getElementById('spinner');
+        
+        function createWheel() {
+            const segments = spinOutcomes;
+            spinner.innerHTML = '';
+            const angle = 360 / segments.length;
+            segments.forEach((val, i) => {
+                const segment = document.createElement('div');
+                segment.className = 'absolute w-1/2 h-1/2 origin-bottom-right';
+                segment.style.transform = `rotate(${i * angle}deg)`;
+                
+                const content = document.createElement('div');
+                content.className = 'absolute w-full h-full clip-path-triangle flex items-center justify-end pr-8';
+                
+                const text = document.createElement('span');
+                text.className = 'transform -rotate-45 font-bold text-lg';
+                text.textContent = val >= 0 ? `$${val}`: `-$${Math.abs(val)}`;
+                content.style.backgroundColor = i % 2 === 0 ? '#374151' : '#4b5563';
+                
+                content.appendChild(text);
+                segment.appendChild(content);
+                spinner.appendChild(segment);
+            });
+            // Add custom clip-path to head
+            const styleSheet = document.createElement("style");
+            styleSheet.innerText = ".clip-path-triangle { clip-path: polygon(100% 0, 0 100%, 100% 100%); }";
+            document.head.appendChild(styleSheet);
+        }
+
+        let isSpinning = false;
+        async function startSpin() {
+            if (isSpinning) return;
+            if (userData.balance < 1) {
+                showPopup("Error", "You need at least $1.00 to spin.");
+                return;
+            }
+            isSpinning = true;
+            document.getElementById('spin-btn').disabled = true;
+
+            await updateUserBalance(-1, 'games', 'Spin cost');
+            
+            const rand = Math.random() * 100;
+            let outcome;
+            if (rand < 2) outcome = 100;          // 2% for 100
+            else if (rand < 16) outcome = 5;      // 14% for 5
+            else if (rand < 50) outcome = Math.random() < 0.5 ? 2 : -2; // 34% for 2 or -2
+            else outcome = 0;                     // 50% for 0
+            
+            const outcomeIndex = spinOutcomes.indexOf(outcome);
+            const segmentAngle = 360 / spinOutcomes.length;
+            const randomOffset = (Math.random() - 0.5) * segmentAngle * 0.8;
+            const targetRotation = 360 * 5 - (outcomeIndex * segmentAngle) - randomOffset;
+            
+            spinner.style.transition = 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            spinner.style.transform = `rotate(${targetRotation}deg)`;
+            
+            setTimeout(async () => {
+                isSpinning = false;
+                document.getElementById('spin-btn').disabled = false;
+                spinner.style.transition = 'none';
+                const finalRotation = targetRotation % 360;
+                spinner.style.transform = `rotate(${finalRotation}deg)`;
+
+                if (outcome !== 0) {
+                    await updateUserBalance(outcome, 'games', `Spin win of ${outcome}`);
+                }
+                
+                if (outcome > 0) showPopup("You Won!", `Congratulations! You won $${outcome}.`);
+                else if (outcome < 0) showPopup("Unlucky!", `You lost $${Math.abs(outcome)}.`);
+                else showPopup("Try Again!", "You won $0. Better luck next time!");
+            }, 4100);
+        }
+        
+        // --- Aviator Game ---
+        const canvas = document.getElementById('aviator-canvas');
+        const ctx = canvas.getContext('2d');
+        let plane = { x: 20, y: canvas.height - 30 };
+        let multiplier = 1.00;
+        let gameRunning = false;
+        let crashed = false;
+        let crashMultiplier;
+        let animationFrameId;
+
+        const betBtn = document.getElementById('aviator-bet-btn');
+        const cashoutBtn = document.getElementById('aviator-cashout-btn');
+        const statusEl = document.getElementById('aviator-status');
+        const multiplierEl = document.getElementById('aviator-multiplier');
+        
+        function getCrashPoint() {
+            const r = Math.random() * 100;
+            if (r < 60) return 1 + Math.random() * 0.5; // 1x - 1.5x (60%)
+            if (r < 80) return 1.5 + Math.random() * 0.5; // 1.5x - 2x (20%)
+            if (r < 92) return 2 + Math.random() * 4;   // 2x - 6x (12%)
+            if (r < 97) return 6 + Math.random() * 4;   // 6x - 10x (5%)
+            return 10 + Math.random() * 90; // 10x - 100x (3%)
+        }
+
+        function drawPlane() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            // Simple plane shape
+            ctx.moveTo(plane.x, plane.y);
+            ctx.lineTo(plane.x + 30, plane.y);
+            ctx.lineTo(plane.x + 40, plane.y - 10);
+            ctx.lineTo(plane.x + 30, plane.y - 10);
+            ctx.lineTo(plane.x + 20, plane.y - 20);
+            ctx.lineTo(plane.x + 10, plane.y - 10);
+            ctx.lineTo(plane.x, plane.y-10);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawCrash() {
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+             ctx.font = "30px Arial";
+             ctx.fillStyle = "red";
+             ctx.textAlign = "center";
+             ctx.fillText("💥 CRASHED!", canvas.width/2, canvas.height/2);
+        }
+
+        function aviatorLoop() {
+            if (!gameRunning) return;
+            
+            // Calculate next position
+            multiplier += 0.01 * Math.pow(multiplier, 0.2); // S-curve growth
+            plane.x += 1;
+            plane.y -= Math.log(multiplier) * 0.5;
+
+            // Check for crash
+            if (multiplier >= crashMultiplier) {
+                gameRunning = false;
+                crashed = true;
+                statusEl.textContent = `CRASHED @ ${crashMultiplier.toFixed(2)}x`;
+                statusEl.classList.remove('hidden');
+                betBtn.disabled = false;
+                betBtn.textContent = "Place Bet";
+                cashoutBtn.disabled = true;
+                drawCrash();
+                showPopup("Crashed!", `The plane flew away at ${crashMultiplier.toFixed(2)}x. Better luck next time!`);
+                cancelAnimationFrame(animationFrameId);
+                return;
+            }
+            
+            // Update UI
+            multiplierEl.textContent = `${multiplier.toFixed(2)}x`;
+            drawPlane();
+            
+            animationFrameId = requestAnimationFrame(aviatorLoop);
+        }
+
+        async function placeAviatorBet() {
+            const betAmount = parseFloat(document.getElementById('aviator-bet-amount').value);
+            if (isNaN(betAmount) || betAmount < 1) {
+                showPopup("Invalid Bet", "Minimum bet is $1.00");
+                return;
+            }
+            if (betAmount > userData.balance) {
+                showPopup("Insufficient Funds", "You don't have enough balance for this bet.");
+                return;
+            }
+
+            await updateUserBalance(-betAmount, 'games', 'Aviator bet');
+            
+            betBtn.disabled = true;
+            betBtn.textContent = "Flying...";
+            cashoutBtn.disabled = false;
+            statusEl.classList.add('hidden');
+
+            // Reset game state
+            gameRunning = true;
+            crashed = false;
+            multiplier = 1.00;
+            plane = { x: 20, y: canvas.height - 30 };
+            crashMultiplier = getCrashPoint();
+            
+            setTimeout(() => {
+                aviatorLoop();
+            }, 1000); // Wait 1 sec before takeoff
+        }
+
+        async function cashoutAviator() {
+            if (!gameRunning || crashed) return;
+
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            
+            const betAmount = parseFloat(document.getElementById('aviator-bet-amount').value);
+            const winnings = betAmount * multiplier;
+            
+            await updateUserBalance(winnings, 'games', `Aviator cashout at ${multiplier.toFixed(2)}x`);
+            
+            cashoutBtn.disabled = true;
+            betBtn.disabled = false;
+            betBtn.textContent = "Place Bet";
+            
+            showPopup("You Won!", `Cashed out at ${multiplier.toFixed(2)}x and won $${winnings.toFixed(2)}!`);
+        }
+
+        window.addEventListener('load', () => {
+             initApp();
+             createWheel();
+             drawPlane();
+        });
+
+    </script>
+</body>
+</html>
+
