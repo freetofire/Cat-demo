@@ -417,54 +417,75 @@
             }
         }
         
+        // --- [FIXED] Referral Handling Logic ---
         async function handleReferral() {
+            // The start_param is provided when the app is opened via a referral link
             const startParam = tg.initDataUnsafe?.start_param;
+
+            // Proceed only if there's a start_param and the user doesn't already have a referrer.
+            // This prevents applying a referral bonus multiple times.
             if (startParam && !userData.referrals.referrer) {
                 const referrerId = startParam;
-                
                 const currentUserTgId = tg.initDataUnsafe?.user?.id?.toString();
+
+                // 1. Check for self-referral to prevent users from referring themselves.
                 if (referrerId === currentUserTgId) {
-                    console.log("User tried to refer themselves.");
+                    console.warn("User tried to refer themselves. Ignoring.");
                     return;
                 }
 
-                const userRef = doc(db, "users", telegramId);
-                const referrerQuery = query(collection(db, "users"), where("telegram.id", "==", parseInt(referrerId)));
-                const referrerSnap = await getDocs(referrerQuery);
+                // 2. More efficient and direct way to get the referrer's document using their ID.
+                const referrerRef = doc(db, "users", referrerId);
+                const referrerSnap = await getDoc(referrerRef);
 
-                if (!referrerSnap.empty) {
-                    const referrerDoc = referrerSnap.docs[0];
-                    const referrerRef = referrerDoc.ref;
+                // Check if the referrer actually exists in our database
+                if (referrerSnap.exists()) {
+                    const userRef = doc(db, "users", telegramId);
                     
+                    // Use a batch write to ensure all updates succeed or fail together, maintaining data integrity.
                     const batch = writeBatch(db);
+                    const referrerData = referrerSnap.data();
 
-                    // Credit new user
+                    // 3. Update the new user (the one who clicked the link)
                     const newUserBonus = 2.66;
                     batch.update(userRef, {
-                        'referrals.referrer': referrerId,
+                        'referrals.referrer': referrerId, // Set the referrer ID
                         'balance': (userData.balance || 0) + newUserBonus,
                         'earnings.referrals': (userData.earnings?.referrals || 0) + newUserBonus
                     });
 
-                    // Credit referrer
+                    // 4. Update the referrer (the one who shared the link)
                     const referrerBonus = 2.00;
-                    const referrerData = referrerDoc.data();
                     batch.update(referrerRef, {
                         'balance': (referrerData.balance || 0) + referrerBonus,
                         'earnings.referrals': (referrerData.earnings?.referrals || 0) + referrerBonus,
                         'referrals.referredCount': (referrerData.referrals?.referredCount || 0) + 1,
-                        'referrals.list': [...(referrerData.referrals?.list || []), {
-                            id: currentUserTgId, 
-                            username: tg.initDataUnsafe?.user?.username || 'Unknown',
-                            timestamp: new Date()
-                        }]
+                        // Add the new user to the referrer's list of referred users
+                        'referrals.list': [
+                            ...(referrerData.referrals?.list || []), 
+                            {
+                                id: currentUserTgId, 
+                                username: tg.initDataUnsafe?.user?.username || 'Unknown',
+                                timestamp: serverTimestamp() // Use server timestamp for consistency
+                            }
+                        ]
                     });
 
-                    await batch.commit();
-                    showPopup("Referral Success!", `You've received $${newUserBonus} and your friend received $${referrerBonus}!`);
+                    try {
+                        await batch.commit();
+                        showPopup("Referral Success!", `You've been awarded $${newUserBonus} for joining, and your friend received $${referrerBonus}!`);
+                        console.log("Referral processed successfully.");
+                    } catch (error) {
+                        console.error("Error committing referral batch:", error);
+                        showPopup("Referral Error", "There was an issue applying the referral bonus. Please try again later.");
+                    }
+
+                } else {
+                    console.warn(`Referrer with ID ${referrerId} not found.`);
                 }
             }
         }
+
 
         function listenToUserData() {
             onSnapshot(doc(db, "users", telegramId), (doc) => {
